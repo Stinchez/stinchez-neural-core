@@ -1,0 +1,26 @@
+{
+  "name": "stinchez-neural-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "STINCHEZ Neural Core - live Deriv market analysis desk and Autopilot built on the STINCHEZ Traders strategy guide.",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "check": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.133.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

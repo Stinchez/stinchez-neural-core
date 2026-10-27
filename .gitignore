@@ -1,0 +1,6 @@
+node_modules/
+# Local secrets: Claude API key, Deriv client ID
+.env
+.env.*
+!.env.example
+*.log

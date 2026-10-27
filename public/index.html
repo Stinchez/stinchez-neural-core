@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STINCHEZ Neural Core</title>
+  <meta name="description" content="Robotic, self-scanning Deriv analysis built on the STINCHEZ Traders strategy guide.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-scan" aria-hidden="true"></div>
+
+  <div id="boot" class="boot" role="status" aria-live="polite">
+    <canvas id="boot-globe" class="boot-globe" aria-hidden="true"></canvas>
+    <div class="boot-inner">
+      <div class="boot-logo">STINCHEZ<span>NEURAL CORE</span></div>
+      <ol id="boot-log" class="boot-log"></ol>
+      <div class="boot-track"><i id="boot-bar"></i></div>
+      <p class="boot-skip">click to skip</p>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i></span>
+      <div>
+        <strong>STINCHEZ</strong>
+        <small>NEURAL TRADING CORE · DERIV</small>
+      </div>
+    </div>
+    <div class="controls">
+      <label>MARKET
+        <select id="symbol"></select>
+      </label>
+      <label>CANDLES
+        <select id="granularity">
+          <option value="60">1 min</option>
+          <option value="120">2 min</option>
+          <option value="180">3 min</option>
+          <option value="300">5 min</option>
+        </select>
+      </label>
+      <span id="conn" class="pill" data-state="idle">offline</span>
+    </div>
+    <a id="earn-chip" class="earn-chip" href="#earnings" title="Today's earnings — click for details">
+      <span class="clock-label">EARNED TODAY · <span id="earn-chip-acct">PAPER</span></span>
+      <b id="earn-chip-value">0.00</b>
+    </a>
+    <div class="clock">
+      <span class="clock-label">CANDLE CLOSES IN</span>
+      <span id="countdown" class="clock-value">--:--</span>
+    </div>
+    <div class="account" id="account">
+      <div id="login-form" class="login">
+        <input id="app-id" class="app-id" placeholder="App ID" autocomplete="off" title="Your Deriv OAuth client ID (App ID) from developers.deriv.com">
+        <button id="oauth-login" type="button" class="deriv-login">Log in with Deriv</button>
+        <details class="pat-login">
+          <summary title="Use a Personal Access Token instead">token</summary>
+          <form id="pat-form" class="pat-form">
+            <input id="token" type="password" placeholder="Deriv API token" autocomplete="off">
+            <button type="submit" class="ghost">Link</button>
+          </form>
+        </details>
+      </div>
+      <div id="link-error" class="link-error" role="alert" hidden></div>
+      <div id="account-info" class="account-info" hidden>
+        <span id="acct-type" class="pill"></span>
+        <select id="acct-select" title="Trading account"></select>
+        <strong id="acct-balance"></strong>
+        <label class="stake">Stake <input id="stake" type="number" min="0.35" step="0.01" value="1"></label>
+        <button id="logout" class="ghost" type="button">Unlink</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel hud robot">
+      <div class="robot-visual">
+        <canvas id="robot-canvas" aria-label="Robot mind animation"></canvas>
+      </div>
+
+      <div id="best-vol" class="best-vol idle">
+        <div class="bv-label">// OPTIMAL VOLATILITY · SELF-SCAN</div>
+        <div id="bv-name" class="bv-name">Scanning…</div>
+        <div id="bv-trade" class="bv-trade">Bringing 10 markets online</div>
+        <div class="bv-meter"><i id="bv-meter"></i></div>
+        <div id="bv-strength" class="bv-strength"></div>
+        <ul id="bv-reasons" class="bv-reasons"></ul>
+        <div class="bv-actions">
+          <button id="lock-on" type="button" disabled>Lock on</button>
+          <div id="bv-runners" class="bv-runners"></div>
+        </div>
+      </div>
+
+      <div class="robot-brain">
+        <div class="panel-head">
+          <h2>Robot mind</h2>
+          <div class="robot-controls">
+            <label class="toggle"><input id="auto-rotate" type="checkbox"> Auto-rotate</label>
+            <select id="rotate-every" title="How often the robot follows the best market">
+              <option value="15">15s</option>
+              <option value="30" selected>30s</option>
+              <option value="60">60s</option>
+            </select>
+            <label class="toggle"><input id="voice" type="checkbox"> Voice</label>
+          </div>
+        </div>
+        <div id="robot-action" class="robot-action">Warming up…</div>
+        <div id="robot-gauges" class="gauges"></div>
+        <ol id="robot-thoughts" class="thoughts"></ol>
+      </div>
+    </section>
+
+    <section id="ap-panel" class="panel hud autopilot">
+      <div class="ap-col ap-main">
+        <div class="panel-head">
+          <h2>Autopilot <span id="ap-mode" class="pill ap-mode">PAPER</span></h2>
+        </div>
+        <button id="ap-toggle" type="button" class="ap-go">ENGAGE AUTOPILOT</button>
+        <div id="ap-status" class="ap-status"></div>
+        <div id="ap-stats" class="memory-stats"></div>
+        <p class="hint">Scans the chosen markets every second and trades the strongest READY signal by itself — one trade at a time, inside your limits. With no account linked it paper-trades using Deriv's real payouts, so the P&amp;L is in real money terms. <b>Esc</b> stops it instantly.</p>
+      </div>
+      <div class="ap-col ap-settings">
+        <div class="panel-head"><h2>Bot settings</h2></div>
+        <div class="set-grid">
+          <label>Stake mode
+            <select id="ap-sizing">
+              <option value="fixed">Fixed stake</option>
+              <option value="compound">Grows with balance</option>
+            </select>
+          </label>
+          <label>Stake per trade <input id="ap-stake" type="number" min="0.35" step="0.01"></label>
+          <label>% of balance per trade <input id="ap-stakepct" type="number" min="0.1" max="50" step="0.1"></label>
+          <label>Max stake % of balance <input id="ap-maxpct" type="number" min="0.1" max="100" step="0.1"></label>
+          <label>Markets
+            <select id="ap-universe">
+              <option value="digits">Digit markets (Volatility, Jump, Daily Reset)</option>
+              <option value="ticks">All tick synthetics (+ Step)</option>
+              <option value="all">Every Deriv market (heavy)</option>
+            </select>
+          </label>
+          <label>Recovery
+            <select id="ap-recovery">
+              <option value="off">Off · same stake</option>
+              <option value="martingale">Martingale ×1.5 · max 2 losses</option>
+            </select>
+          </label>
+          <label>Stop-loss <input id="ap-sl" type="number" min="0" step="0.01" placeholder="auto"></label>
+          <label>Take-profit <input id="ap-tp" type="number" min="0" step="0.01" placeholder="off"></label>
+          <label>Max trades <input id="ap-trades" type="number" min="1" max="200"></label>
+          <label>Lock after <input id="ap-streak" type="number" min="1" max="10"> losses in a row</label>
+          <label>Wait between trades <input id="ap-gap" type="number" min="3" max="600" value="10"> s</label>
+        </div>
+        <label class="ap-slider">Minimum signal strength <b id="ap-min-val">75%</b>
+          <input id="ap-min" type="range" min="67" max="100" step="1" value="75">
+        </label>
+        <div class="set-sub">Contract types it may trade</div>
+        <div id="ap-groups" class="ap-groups"></div>
+        <details class="ap-strats-wrap">
+          <summary>Strategies it may use <span id="ap-strats-count" class="muted"></span></summary>
+          <table id="ap-strats" class="ap-strats"></table>
+        </details>
+      </div>
+      <div class="ap-col">
+        <div class="panel-head"><h2>Autopilot log</h2></div>
+        <ol id="ap-log" class="ap-log"></ol>
+      </div>
+    </section>
+
+    <section id="earnings" class="panel hud earnings">
+      <div class="panel-head">
+        <h2>Earnings</h2>
+        <div class="earn-filters">
+          <select id="earn-acct" title="Which account's trades">
+            <option value="paper">Paper (simulated, real payouts)</option>
+            <option value="demo">Demo account</option>
+            <option value="real">Real account</option>
+            <option value="all">All</option>
+          </select>
+          <select id="earn-period" title="Time period">
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="all">All time</option>
+          </select>
+          <button id="earn-reset" class="ghost small-btn" type="button" title="Clear paper results">Clear paper</button>
+          <button id="earn-csv" class="ghost small-btn" type="button">Download CSV</button>
+        </div>
+      </div>
+      <div id="earn-kpis" class="earn-kpis"></div>
+      <div class="earn-grid">
+        <div class="earn-curve-wrap">
+          <h3>Equity curve</h3>
+          <canvas id="earn-curve" height="170"></canvas>
+        </div>
+        <div><h3>By market</h3><table class="earn-table" id="earn-market"></table></div>
+        <div><h3>By strategy</h3><table class="earn-table" id="earn-strategy"></table></div>
+        <div><h3>By contract</h3><table class="earn-table" id="earn-type"></table><h3>Autopilot vs you</h3><table class="earn-table" id="earn-who"></table></div>
+      </div>
+    </section>
+
+    <section id="growth" class="panel hud growth">
+      <div class="panel-head">
+        <h2>Grow my account</h2>
+        <span class="small">Plan, simulate with Deriv's real payouts, then apply to the bot</span>
+      </div>
+      <div class="growth-grid">
+        <div class="set-grid growth-inputs">
+          <label>Starting balance <input id="gr-start" type="number" min="1" step="0.01"></label>
+          <label>Goal balance <input id="gr-goal" type="number" min="1" step="0.01"></label>
+          <label>Contract
+            <select id="gr-contract">
+              <option value="EO">Even / Odd</option>
+              <option value="RF">Rise / Fall (5 ticks)</option>
+              <option value="OVER2">Over 2</option>
+              <option value="UNDER7">Under 7</option>
+              <option value="DIFFERS">Differs</option>
+              <option value="MATCHES">Matches</option>
+            </select>
+          </label>
+          <label>Stake % of balance <input id="gr-pct" type="number" min="0.5" max="50" step="0.5" value="5"></label>
+          <label>Daily target % <input id="gr-tp" type="number" min="1" max="100" value="10"></label>
+          <label>Daily stop % <input id="gr-sl" type="number" min="1" max="100" value="20"></label>
+          <label>Max trades / day <input id="gr-trades" type="number" min="1" max="200" value="20"></label>
+          <label>Days <input id="gr-days" type="number" min="1" max="365" value="30"></label>
+          <div class="growth-actions">
+            <button id="gr-apply" type="button">Apply plan to bot</button>
+            <button id="gr-paper" class="ghost small-btn" type="button">Reset paper balance to start</button>
+          </div>
+        </div>
+        <div>
+          <div id="gr-odds" class="gr-odds"></div>
+          <div id="gr-result" class="earn-kpis"></div>
+          <p id="gr-verdict" class="gr-verdict"></p>
+        </div>
+        <div>
+          <h3 class="gr-h3">Stake ladder</h3>
+          <table id="gr-ladder" class="earn-table"></table>
+          <p id="gr-balance" class="hint"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel hud scanner">
+      <div class="panel-head">
+        <h2>Market radar <span id="scan-status" class="small">Self-scan starting…</span></h2>
+        <div class="scan-controls">
+          <select id="scan-universe" title="Which markets the self-scan and Autopilot watch">
+            <option value="digits">Digit markets (Volatility, Jump, Daily Reset)</option>
+            <option value="ticks">All tick-tradeable synthetics (+ Step)</option>
+            <option value="all">Every Deriv market (heavy)</option>
+          </select>
+          <button id="scan-toggle" class="ghost" type="button">Pause self-scan</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Rank</th><th>Volatility</th><th>Signal</th><th>Best trade</th><th>Last</th><th>State</th></tr></thead>
+          <tbody id="scan-body"><tr><td colspan="6" class="muted">Bringing markets online…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel hud learn">
+      <div class="learn-col">
+        <div class="panel-head"><h2>Knowledge core</h2></div>
+        <p class="hint">Feed the robot a strategy article, forum post or PDF link. Claude reads it and turns its rules into a strategy, which the robot then replays on real ticks. Nothing is trusted until the replay proves it beats chance.</p>
+        <form id="learn-form" class="learn-form">
+          <input id="learn-url" type="url" placeholder="https://… strategy page or PDF">
+          <button id="learn-btn" type="submit">Learn</button>
+        </form>
+        <details class="learn-paste">
+          <summary>…or paste text (YouTube transcript, Telegram post, notes)</summary>
+          <textarea id="learn-text" rows="5" placeholder="Paste the strategy text here"></textarea>
+        </details>
+        <div id="learn-status" class="learn-status" role="status" aria-live="polite"></div>
+        <ul id="learned-list" class="learned-list"></ul>
+      </div>
+
+      <div class="learn-col">
+        <div class="panel-head">
+          <h2>Robot memory</h2>
+          <button id="memory-reset" class="ghost small-btn" type="button">Wipe memory</button>
+        </div>
+        <p class="hint">The robot paper-trades every READY signal on all 10 markets — no money — and remembers each strategy's real results across sessions. Strategies that keep losing lose its trust.</p>
+        <div id="memory-stats" class="memory-stats"></div>
+        <div id="memory-recent" class="memory-recent"></div>
+        <ul id="memory-table" class="memory-table"></ul>
+      </div>
+
+    </section>
+
+    <section class="panel hud risk">
+      <div class="risk-col">
+        <div class="panel-head"><h2>Risk limits</h2></div>
+        <div class="risk-settings">
+          <label><span>Lock after</span> <input id="risk-max" type="number" min="1" max="10" value="2"> <span>losses in a row</span></label>
+          <label><span>Cooldown</span> <input id="risk-cool" type="number" min="1" max="240" value="15"> <span>min</span></label>
+          <label><span>Recovery</span>
+            <select id="risk-recovery">
+              <option value="off">Off · same stake every trade</option>
+              <option value="martingale">Martingale ×1.5 · max 2 losses per cycle (guide)</option>
+            </select>
+          </label>
+          <label><span>Stake mode</span>
+            <select id="risk-sizing">
+              <option value="fixed">Fixed — the Stake box</option>
+              <option value="compound">Grows with balance (% per trade)</option>
+            </select>
+            <input id="risk-stakepct" type="number" min="0.1" max="50" step="0.1" value="5" title="% of balance per trade"> <span>%</span>
+          </label>
+          <label><span>Stop-loss</span> <input id="risk-sl" type="number" min="0" step="0.01" placeholder="auto"> <span id="risk-sl-hint" class="muted"></span></label>
+          <label><span>Take-profit</span> <input id="risk-tp" type="number" min="0" step="0.01" placeholder="off"></label>
+          <label><span>Max trades</span> <input id="risk-trades" type="number" min="1" max="200" value="10"> <span>per session</span></label>
+          <label><span>Max stake</span> <input id="risk-pct" type="number" min="0.1" max="100" step="0.1" value="2"> <span>% of balance</span></label>
+          <label class="toggle"><input id="risk-strict" type="checkbox"> Strict entries — only strategies with a proven edge</label>
+        </div>
+      </div>
+
+      <div class="risk-col">
+        <div class="panel-head">
+          <h2>Session</h2>
+          <button id="session-new" class="ghost small-btn" type="button">New session</button>
+        </div>
+        <div id="risk-state" class="risk-state"></div>
+        <div id="session-stats" class="memory-stats"></div>
+        <button id="risk-reset" class="ghost small-btn" type="button">Reset streak</button>
+      </div>
+
+      <div class="risk-col">
+        <div class="panel-head"><h2>Worst case</h2></div>
+        <div id="risk-worst" class="risk-worst"></div>
+        <div id="risk-odds" class="risk-odds"></div>
+      </div>
+    </section>
+
+    <section class="panel hud ticket">
+      <div class="panel-head">
+        <h2>Quick trade <span class="small">— set everything yourself</span></h2>
+      </div>
+      <div class="ticket-row">
+        <label>Market <select id="tk-market"></select></label>
+        <label>Contract <select id="tk-type"></select></label>
+        <label id="tk-digit-wrap">Digit / barrier <select id="tk-digit"></select></label>
+        <label>Duration <input id="tk-duration" type="number" min="1" value="1"> <span id="tk-unit">ticks</span></label>
+        <label>Stake <input id="tk-stake" type="number" min="0.35" step="0.01" placeholder="risk stake"></label>
+        <button id="tk-buy" type="button" disabled>Buy</button>
+      </div>
+      <div id="tk-note" class="hint ticket-note"></div>
+    </section>
+
+    <section class="panel hud chart-panel">
+      <div class="panel-head">
+        <h2><span id="sym-name">–</span> <span id="price" class="price">–</span> <span id="sym-kind" class="pill sym-kind"></span></h2>
+        <div class="legend">
+          <span class="lg hma">Hull MA</span><span class="lg ma">MA 20</span><span class="lg bb">Bollinger</span><span class="lg st">Supertrend</span><span class="lg sr">S/R</span>
+        </div>
+      </div>
+      <div class="chart-stage">
+        <canvas id="chart-tunnel" class="chart-tunnel" aria-hidden="true"></canvas>
+        <canvas id="chart" height="360"></canvas>
+      </div>
+      <div class="ind-strip" id="ind-strip"></div>
+    </section>
+
+    <section class="panel hud digits-panel">
+      <div class="panel-head">
+        <h2>Digit pulse</h2>
+        <label class="small">Window
+          <select id="digit-window">
+            <option value="100">100 ticks</option>
+            <option value="500" selected>500 ticks</option>
+            <option value="1000">1000 ticks</option>
+          </select>
+        </label>
+      </div>
+      <div id="digit-stream" class="digit-stream"></div>
+      <div id="digit-bars" class="digit-bars"></div>
+      <div class="digit-stats" id="digit-stats"></div>
+      <div class="ou-row">
+        <label class="small">Over/Under barrier
+          <select id="ou-barrier"></select>
+        </label>
+        <div id="ou-stats" class="ou-stats"></div>
+      </div>
+      <div class="ou-row md-row">
+        <label class="small">Matches/Differs digit
+          <select id="md-digit"></select>
+        </label>
+        <div id="md-stats" class="ou-stats"></div>
+      </div>
+    </section>
+
+    <section class="panel hud deep">
+      <div class="panel-head">
+        <h2>Deep analysis</h2>
+        <span class="small">Statistics, structure and multi-timeframe trend</span>
+      </div>
+      <div class="deep-grid">
+        <div class="deep-block">
+          <h3>Randomness check</h3>
+          <div id="deep-random"></div>
+        </div>
+        <div class="deep-block">
+          <h3>Trend &amp; volatility</h3>
+          <div id="deep-trend"></div>
+        </div>
+        <div class="deep-block">
+          <h3>Support &amp; resistance</h3>
+          <div id="deep-levels"></div>
+        </div>
+        <div class="deep-block wide">
+          <h3>Next-digit map <span class="small" id="deep-next-label"></span></h3>
+          <div id="deep-matrix" class="matrix"></div>
+        </div>
+        <div class="deep-block">
+          <h3>Ticks since each digit</h3>
+          <div id="deep-gaps" class="gaps"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel hud board">
+      <div class="panel-head">
+        <h2>Strategy board</h2>
+        <div class="tabs" id="tabs">
+          <button data-group="all" class="active">All</button>
+          <button data-group="Rise / Fall">Rise / Fall</button>
+          <button data-group="Even / Odd">Even / Odd</button>
+          <button data-group="Over / Under">Over / Under</button>
+          <button data-group="Matches / Differs">Matches / Differs</button>
+        </div>
+        <label class="toggle"><input id="sound" type="checkbox"> Alert sound</label>
+      </div>
+      <p class="hint">Setup rules are checked on the forming candle; a strategy turns <b>READY</b> only when every rule and the guide's entry point line up. The track record replays the last few hours of real ticks.</p>
+      <p id="board-note" class="hint board-note"></p>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section class="panel hud log">
+      <div class="panel-head"><h2>Trade log</h2></div>
+      <ul id="trade-log" class="trade-log"><li class="muted">Link a Deriv account to place trades from strategy cards.</li></ul>
+    </section>
+  </main>
+
+  <footer class="disclaimer">
+    <p><b>Risk notice.</b> Deriv synthetic indices are generated by a random number generator, so past digits and indicators cannot guarantee the next tick. The robot ranks markets by how well the guide's rules line up and how they performed in the replay — not by any guaranteed outcome. Start on a demo account and never trade more than you can afford to lose.</p>
+    <p class="muted">Market data streams from Deriv's public Options API. To trade, create a Personal Access Token with the <b>trade</b> scope and an app ID at developers.deriv.com; the token stays in this tab's memory only.</p>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
