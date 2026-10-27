@@ -5,14 +5,15 @@
   "type": "module",
   "description": "STINCHEZ Neural Core - live Deriv market analysis desk and Autopilot built on the STINCHEZ Traders strategy guide.",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.13 <25"
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.ts",
     "dev": "node --env-file-if-exists=.env --watch src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc -p .",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "vercel-build": "echo \"Static site in public/, functions in api/ - nothing to compile\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.133.0",

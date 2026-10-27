@@ -14,6 +14,20 @@ npm run check      # typecheck + tests
 
 Optional: copy `.env.example` to `.env` to enable "Log in with Deriv" (`DERIV_CLIENT_ID`) and learning strategies from websites (`ANTHROPIC_API_KEY`). Never commit `.env`.
 
+## Deploy on Vercel
+
+The repo is set up for Vercel (`vercel.json`): the site is served from `public/` and the server routes run as Vercel Functions in `api/` (`/api/learn`, `/api/deriv/*`, and `/oauth/*` rewritten to `/api/oauth/*`). Live market data and the analysis work with no settings at all.
+
+To turn on the optional features, add these in **Vercel → Project → Settings → Environment Variables**, then redeploy:
+
+| Variable | Needed for | Value |
+|---|---|---|
+| `SESSION_SECRET` | Log in with Deriv | Any long random text (keeps the encrypted login cookie readable across Vercel instances) |
+| `DERIV_CLIENT_ID` | Log in with Deriv | Your Deriv OAuth client ID — and add `https://<your-vercel-domain>/oauth/callback` as a redirect URL in your Deriv app |
+| `ANTHROPIC_API_KEY` | Learn from a website | Your Claude API key |
+
+The Deriv login is stateless: the login-in-progress and the access token are kept in AES-256-GCM encrypted, HttpOnly, Secure cookies, never in server memory.
+
 > **Risk warning.** Deriv's synthetic indices are generated randomly and every contract carries a built-in house margin. Nothing here guarantees profit. Start in paper or demo mode, and never trade money you can't afford to lose.
 
 ## What it does

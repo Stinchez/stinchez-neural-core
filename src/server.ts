@@ -1,12 +1,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { friendlyError, learn } from './learn.ts';
-import { handleOAuth, sameOrigin } from './oauth.ts';
+import { friendlyError, learn } from './learn.js';
+import { handleOAuth, sameOrigin } from './oauth.js';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 
 // The browser streams market data from Deriv's Options API directly; the server
 // serves public/, runs /api/learn (reads a strategy source with Claude) and the
-// "Log in with Deriv" OAuth flow plus its account proxy (src/oauth.ts).
+// "Log in with Deriv" OAuth flow plus its account proxy (src/oauth.js).
 const root = resolve(import.meta.dirname, '..', 'public');
 const port = Number(process.env.PORT ?? 3200);
 const host = process.env.HOST ?? '127.0.0.1';
@@ -37,7 +37,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown) {
 
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
-  if (await handleOAuth(req, res, path, port)) return;
+  if (await handleOAuth(req, res, path)) return;
   if (path === '/api/learn') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Use POST' });
     // Other websites must not be able to spend this server's Claude credits.
